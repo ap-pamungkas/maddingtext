@@ -1,0 +1,44 @@
+:root {
+  --canvas-bg: #1b1a1e;
+  --surface: #26252b;
+  --surface-hover: #2f2e36;
+  --border: #3c3a43;
+  --text-primary: #f2f0f5;
+  --text-muted: #9e9aa8;
+  --focus-ring: #e4e1eb;
+  --pin-accent: #d4a36a;
+  --pin-accent-bg: rgba(212, 163, 106, 0.16);
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@media (forced-colors: active) {
+  :root {
+    --canvas-bg: Canvas;
+    --surface: ButtonFace;
+    --surface-hover: ButtonFace;
+    --border: ButtonText;
+    --text-primary: CanvasText;
+    --text-muted: GrayText;
+    --focus-ring: Highlight;
+    --pin-accent: Highlight;
+    --pin-accent-bg: ButtonFace;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100dvh;
+  background-color: var(--canvas-bg);
+  color: var(--text-primary);
+}
