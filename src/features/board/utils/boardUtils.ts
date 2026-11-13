@@ -26,3 +26,18 @@ export function findNoteIdAtPoint(clientX: number, clientY: number): string | nu
   return el?.closest<HTMLElement>('[data-note-id]')?.dataset.noteId ?? null
 }
 
+export function calculateHangingAngle(pinXPercent: number): number {
+  const offsetFromCenter = (50 - pinXPercent) / 50
+  return Math.round(offsetFromCenter * 8.5 * 10) / 10
+}
+
+export function calculatePinDropPosition(
+  clientX: number,
+  cardRect: DOMRect,
+): { pinX: number; pinY: number } {
+  const rawXPercent = ((clientX - cardRect.left) / cardRect.width) * 100
+  const pinX = Math.max(16, Math.min(84, Math.round(rawXPercent)))
+  const pinY = 12
+  return { pinX, pinY }
+}
+

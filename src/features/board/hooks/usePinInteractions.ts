@@ -9,7 +9,7 @@ import type {
 import { findNoteIdAtPoint } from '../utils/boardUtils'
 
 interface UsePinInteractionsProps {
-  onPinNote: (id: string) => void
+  onPinNote: (id: string, clientX?: number) => void
   onUnpinNote: (id: string, index: number) => void
 }
 
@@ -93,7 +93,7 @@ export function usePinInteractions({
           ? findNoteIdAtPoint(currentDrag.clientX, currentDrag.clientY)
           : targetNoteId
         if (dropTargetId) {
-          onPinNote(dropTargetId)
+          onPinNote(dropTargetId, currentDrag?.clientX)
         }
         return null
       })

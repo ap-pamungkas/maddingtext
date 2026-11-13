@@ -6,6 +6,7 @@ import { PinDragGhost } from './components/PinDragGhost'
 import { useBoardNotes } from './hooks/useBoardNotes'
 import { usePinInteractions } from './hooks/usePinInteractions'
 import type { Note } from './types'
+import { calculatePinDropPosition } from './utils/boardUtils'
 
 export function BoardCanvas() {
   const {
@@ -32,7 +33,22 @@ export function BoardCanvas() {
     registerCardRef,
     registerTextareaRef,
     registerCustomizeBtnRef,
+    getCardRect,
   } = useBoardNotes()
+
+  const handlePinNote = useCallback(
+    (id: string, clientX?: number) => {
+      let pinCoords: { pinX: number; pinY: number } | undefined
+      if (clientX !== undefined) {
+        const rect = getCardRect(id)
+        if (rect) {
+          pinCoords = calculatePinDropPosition(clientX, rect)
+        }
+      }
+      pinNoteById(id, pinCoords)
+    },
+    [getCardRect, pinNoteById],
+  )
 
   const {
     pinMode,
@@ -49,7 +65,7 @@ export function BoardCanvas() {
     handleNotePinPointerUp,
     handleNotePinLostCapture,
   } = usePinInteractions({
-    onPinNote: pinNoteById,
+    onPinNote: handlePinNote,
     onUnpinNote: unpinNoteById,
   })
 
@@ -59,11 +75,18 @@ export function BoardCanvas() {
   }, [addNote, deactivatePinMode])
 
   const handleTogglePinFromBoard = useCallback(
-    (id: string, index: number) => {
-      togglePin(id, index)
+    (id: string, index: number, clientX?: number) => {
+      let pinCoords: { pinX: number; pinY: number } | undefined
+      if (clientX !== undefined) {
+        const rect = getCardRect(id)
+        if (rect) {
+          pinCoords = calculatePinDropPosition(clientX, rect)
+        }
+      }
+      togglePin(id, index, pinCoords)
       deactivatePinMode()
     },
-    [deactivatePinMode, togglePin],
+    [deactivatePinMode, getCardRect, togglePin],
   )
 
   const handleTogglePinDirect = useCallback(

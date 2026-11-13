@@ -1,4 +1,5 @@
-import type { NoteFont, PaperPattern } from '../types'
+import { useId } from 'react'
+import type { NoteFont, PaperPattern, PaperShape } from '../types'
 
 export function PushpinIcon({ size = 16 }: { size?: number }) {
   return (
@@ -13,6 +14,185 @@ export function PushpinIcon({ size = 16 }: { size?: number }) {
         d="M5.5 2.5h5l-.85 3.4 2.1 2.1v1.25H8.6v4.25L8 14.5l-.6-1V9.25H4.25V8l2.1-2.1L5.5 2.5Z"
         fill="currentColor"
       />
+    </svg>
+  )
+}
+
+export function RealisticPin({
+  size = 28,
+  color = 'var(--pin-accent, #d4a36a)',
+}: {
+  size?: number
+  color?: string
+}) {
+  const id = useId().replace(/:/g, '')
+
+  return (
+    <svg
+      width={size}
+      height={Math.round((size * 32) / 28)}
+      viewBox="0 0 28 32"
+      fill="none"
+      aria-hidden="true"
+      className="realistic-pin-svg"
+    >
+      <defs>
+        {/* Cast shadow under pin (falls down & right) */}
+        <radialGradient
+          id={`pin-shadow-${id}`}
+          cx="45%"
+          cy="45%"
+          r="50%"
+        >
+          <stop offset="0%" stopColor="#000" stopOpacity="0.38" />
+          <stop offset="65%" stopColor="#000" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0" />
+        </radialGradient>
+
+        {/* Dome head 3D sphere gradient with light from upper-left */}
+        <radialGradient
+          id={`pin-dome-${id}`}
+          cx="36%"
+          cy="32%"
+          r="58%"
+          fx="32%"
+          fy="28%"
+        >
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.72" />
+          <stop offset="28%" stopColor={color} stopOpacity="1" />
+          <stop offset="85%" stopColor={color} stopOpacity="0.88" />
+          <stop offset="100%" stopColor="#1a0f05" stopOpacity="0.5" />
+        </radialGradient>
+
+        {/* Metallic needle gradient */}
+        <linearGradient id={`pin-needle-${id}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#636c75" />
+          <stop offset="45%" stopColor="#d5dce2" />
+          <stop offset="100%" stopColor="#41484f" />
+        </linearGradient>
+
+        {/* Waist & collar shading */}
+        <linearGradient id={`pin-waist-${id}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#000000" stopOpacity="0.45" />
+          <stop offset="35%" stopColor={color} stopOpacity="0.9" />
+          <stop offset="70%" stopColor="#ffffff" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.55" />
+        </linearGradient>
+      </defs>
+
+      {/* 1. Cast shadow on paper (offset down-right) */}
+      <ellipse
+        cx="18.5"
+        cy="26"
+        rx="7"
+        ry="3.5"
+        fill={`url(#pin-shadow-${id})`}
+      />
+
+      {/* 2. Steel needle entering cork */}
+      <polygon
+        points="13,20 15,20 14,27"
+        fill={`url(#pin-needle-${id})`}
+      />
+
+      {/* 3. Base flange ring / collar */}
+      <ellipse
+        cx="14"
+        cy="20.5"
+        rx="5.8"
+        ry="2.2"
+        fill={`url(#pin-waist-${id})`}
+        stroke="#1a120b"
+        strokeWidth="0.5"
+        strokeOpacity="0.5"
+      />
+
+      {/* 4. Tapered stem / waist */}
+      <path
+        d="M10.8 13.5 C10.8 17.5 11.2 19 11.5 20 L16.5 20 C16.8 19 17.2 17.5 17.2 13.5 Z"
+        fill={`url(#pin-waist-${id})`}
+      />
+
+      {/* 5. Main spherical dome head */}
+      <ellipse
+        cx="14"
+        cy="10"
+        rx="8.5"
+        ry="8"
+        fill={`url(#pin-dome-${id})`}
+      />
+
+      {/* 6. Crisp specular highlight glint at upper-left */}
+      <ellipse
+        cx="11.5"
+        cy="7.5"
+        rx="3.2"
+        ry="2"
+        transform="rotate(-25 11.5 7.5)"
+        fill="#ffffff"
+        fillOpacity="0.55"
+      />
+    </svg>
+  )
+}
+
+export function ShapeIcon({ shape }: { shape: PaperShape }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      {shape === 'standar' && (
+        <rect
+          x="2.5"
+          y="2.5"
+          width="11"
+          height="11"
+          rx="1"
+          stroke="currentColor"
+          strokeWidth="1.25"
+        />
+      )}
+      {shape === 'lipat' && (
+        <>
+          <path
+            d="M2.5 2.5h11v7l-4 4h-7z"
+            stroke="currentColor"
+            strokeWidth="1.25"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M9.5 9.5h4l-4 4v-4z"
+            fill="currentColor"
+            fillOpacity="0.3"
+            stroke="currentColor"
+            strokeWidth="1"
+            strokeLinejoin="round"
+          />
+        </>
+      )}
+      {shape === 'sobek' && (
+        <path
+          d="M2.5 5 4 3.5 5.5 5 7 3.5 8.5 5 10 3.5 11.5 5 13 3.5l.5 10H2.5z"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          strokeLinejoin="round"
+        />
+      )}
+      {shape === 'lengkung' && (
+        <>
+          <path
+            d="M2.5 2.5h11v9.5c-2.5-.8-3.8 0-5.5.4s-3 .8-5.5 0z"
+            stroke="currentColor"
+            strokeWidth="1.25"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M8.5 13.5c2-.5 3.5-.5 5 0"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeOpacity="0.45"
+          />
+        </>
+      )}
     </svg>
   )
 }

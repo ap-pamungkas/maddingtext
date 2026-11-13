@@ -1,5 +1,6 @@
 export type PaperPattern = 'polos' | 'garis' | 'titik' | 'kotak'
 export type NoteFont = 'sans' | 'serif' | 'mono'
+export type PaperShape = 'standar' | 'lipat' | 'sobek' | 'lengkung'
 
 export interface Note {
   id: string
@@ -12,6 +13,10 @@ export interface Note {
   textColor: string | null
   pattern: PaperPattern
   font: NoteFont
+  shape: PaperShape
+  rotation: number
+  pinX?: number
+  pinY?: number
 }
 
 export interface DragState {

@@ -9,6 +9,11 @@ import {
 } from '../constants'
 import type { DragState, Note } from '../types'
 import { clampNotePosition } from '../utils/boardUtils'
+import {
+  fetchNotesFromSheets,
+  isSheetsConfigured,
+  saveNotesToSheets,
+} from '../../../lib/sheetsService'
 
 export function useBoardNotes() {
   const [notes, setNotes] = useState<Note[]>([])
@@ -20,6 +25,8 @@ export function useBoardNotes() {
   const [announcement, setAnnouncement] = useState('')
 
   const nextZIndexRef = useRef(1)
+  const isLoadedRef = useRef(false)
+  const saveTimeoutRef = useRef<number | null>(null)
   const dragRef = useRef<DragState | null>(null)
   const cardRefs = useRef<Record<string, HTMLElement | null>>({})
   const customizeBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({})
@@ -37,6 +44,58 @@ export function useBoardNotes() {
       setAnnouncement('')
     }, 1000)
   }, [])
+
+  // Memuat data pertama kali dari Google Sheets jika URL sudah diset
+  useEffect(() => {
+    let active = true
+
+    async function loadRemoteNotes() {
+      if (!isSheetsConfigured()) {
+        isLoadedRef.current = true
+        return
+      }
+
+      announce('Memuat catatan dari Google Sheets...')
+      const remoteNotes = await fetchNotesFromSheets()
+
+      if (active && remoteNotes) {
+        setNotes(remoteNotes)
+        const maxZ = remoteNotes.reduce((max, n) => Math.max(max, n.zIndex), 0)
+        if (maxZ > 0) {
+          nextZIndexRef.current = maxZ + 1
+        }
+        announce(`Memuat ${remoteNotes.length} catatan dari Google Sheets`)
+      }
+      isLoadedRef.current = true
+    }
+
+    loadRemoteNotes()
+
+    return () => {
+      active = false
+    }
+  }, [announce])
+
+  // Sinkronisasi otomatis ke Google Sheets setiap kali notes berubah (debounced 1 detik)
+  useEffect(() => {
+    if (!isLoadedRef.current || !isSheetsConfigured()) {
+      return
+    }
+
+    if (saveTimeoutRef.current !== null) {
+      window.clearTimeout(saveTimeoutRef.current)
+    }
+
+    saveTimeoutRef.current = window.setTimeout(async () => {
+      await saveNotesToSheets(notes)
+    }, 1000)
+
+    return () => {
+      if (saveTimeoutRef.current !== null) {
+        window.clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [notes])
 
   const triggerPinAnimation = useCallback((id: string) => {
     setJustPinnedId(id)
@@ -112,6 +171,8 @@ export function useBoardNotes() {
       nextZIndexRef.current += 1
       const zIndex = nextZIndexRef.current
 
+      const randomTilt = Math.round((Math.random() * 3.6 - 1.8) * 10) / 10
+
       return [
         ...prev,
         {
@@ -121,10 +182,14 @@ export function useBoardNotes() {
           y: clamped.y,
           zIndex,
           pinned: false,
-          paperColor: '#26252b',
+          paperColor: '#FFE27A',
           textColor: null,
           pattern: 'polos',
           font: 'sans',
+          shape: 'standar',
+          rotation: randomTilt,
+          pinX: 50,
+          pinY: 12,
         },
       ]
     })
@@ -134,7 +199,7 @@ export function useBoardNotes() {
   const updateNoteStyle = useCallback(
     (
       id: string,
-      patch: Partial<Pick<Note, 'paperColor' | 'textColor' | 'pattern' | 'font'>>,
+      patch: Partial<Pick<Note, 'paperColor' | 'textColor' | 'pattern' | 'font' | 'shape'>>,
     ) => {
       setNotes((prev) =>
         prev.map((note) => (note.id === id ? { ...note, ...patch } : note)),
@@ -144,14 +209,21 @@ export function useBoardNotes() {
   )
 
   const pinNoteById = useCallback(
-    (id: string) => {
+    (id: string, coords?: { pinX: number; pinY: number }) => {
       setNotes((prev) => {
         const index = prev.findIndex((n) => n.id === id)
         if (index === -1) return prev
         triggerPinAnimation(id)
         announce(`Catatan ${index + 1} ditempelkan ke mading`)
         return prev.map((note) =>
-          note.id === id ? { ...note, pinned: true } : note,
+          note.id === id
+            ? {
+                ...note,
+                pinned: true,
+                pinX: coords ? coords.pinX : (note.pinX ?? 50),
+                pinY: coords ? coords.pinY : (note.pinY ?? 12),
+              }
+            : note,
         )
       })
     },
@@ -170,13 +242,18 @@ export function useBoardNotes() {
   )
 
   const togglePin = useCallback(
-    (id: string, index: number) => {
+    (id: string, index: number, coords?: { pinX: number; pinY: number }) => {
       let nextPinned = false
       setNotes((prev) =>
         prev.map((note) => {
           if (note.id !== id) return note
           nextPinned = !note.pinned
-          return { ...note, pinned: nextPinned }
+          return {
+            ...note,
+            pinned: nextPinned,
+            pinX: nextPinned && coords ? coords.pinX : (note.pinX ?? 50),
+            pinY: nextPinned && coords ? coords.pinY : (note.pinY ?? 12),
+          }
         }),
       )
       if (nextPinned) {
@@ -350,6 +427,10 @@ export function useBoardNotes() {
     [],
   )
 
+  const getCardRect = useCallback((id: string): DOMRect | null => {
+    return cardRefs.current[id]?.getBoundingClientRect() ?? null
+  }, [])
+
   return {
     notes,
     draggingId,
@@ -374,6 +455,7 @@ export function useBoardNotes() {
     registerCardRef,
     registerTextareaRef,
     registerCustomizeBtnRef,
+    getCardRect,
   }
 }
 

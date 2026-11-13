@@ -1,17 +1,18 @@
 import {
   NOTE_FONTS,
   PAPER_PATTERNS,
+  PAPER_SHAPES,
   PAPER_SWATCHES,
   TEXT_SWATCHES,
 } from '../constants'
 import type { Note } from '../types'
-import { FontIcon, PatternIcon } from './Icons'
+import { FontIcon, PatternIcon, ShapeIcon } from './Icons'
 
 interface NoteStylePanelProps {
   note: Note
   noteIndex: number
   onUpdateStyle: (
-    patch: Partial<Pick<Note, 'paperColor' | 'textColor' | 'pattern' | 'font'>>,
+    patch: Partial<Pick<Note, 'paperColor' | 'textColor' | 'pattern' | 'font' | 'shape'>>,
   ) => void
   onClose: () => void
 }
@@ -34,6 +35,34 @@ export function NoteStylePanel({
         }
       }}
     >
+      <div className="style-section" role="group" aria-label="Bentuk kertas">
+        <span className="style-label-icon" title="Bentuk kertas" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M3 2.5h10v8.5l-3 3H3z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <div className="style-chips">
+          {PAPER_SHAPES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="style-chip"
+              aria-label={`Bentuk ${item.label}`}
+              title={item.label}
+              aria-pressed={note.shape === item.id}
+              onClick={() => onUpdateStyle({ shape: item.id })}
+            >
+              <ShapeIcon shape={item.id} />
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="style-section" role="group" aria-label="Pola kertas">
         <span className="style-label-icon" title="Pola kertas" aria-hidden="true">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none">

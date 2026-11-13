@@ -1,10 +1,17 @@
-import type { NoteFont, PaperPattern } from './types'
+import type { NoteFont, PaperPattern, PaperShape } from './types'
 
 export const DEFAULT_CARD_WIDTH = 268
 export const DEFAULT_CARD_HEIGHT = 190
 export const CANVAS_PADDING = 16
 export const KEYBOARD_STEP = 16
 export const KEYBOARD_FAST_STEP = 48
+
+export const PAPER_SHAPES: { id: PaperShape; label: string }[] = [
+  { id: 'standar', label: 'Potongan rapi' },
+  { id: 'lipat', label: 'Sudut terlipat' },
+  { id: 'sobek', label: 'Sobekan catatan' },
+  { id: 'lengkung', label: 'Lengkung terangkat' },
+]
 
 export const PAPER_PATTERNS: { id: PaperPattern; label: string }[] = [
   { id: 'polos', label: 'Polos' },
@@ -24,12 +31,13 @@ export const NOTE_FONTS: { id: NoteFont; label: string; stack: string }[] = [
 ]
 
 export const PAPER_SWATCHES: { color: string; label: string }[] = [
-  { color: '#26252b', label: 'Abu gelap' },
-  { color: '#f3ead8', label: 'Krem kertas' },
-  { color: '#d8e2dc', label: 'Hijau sage' },
-  { color: '#eddcd2', label: 'Persik lembut' },
-  { color: '#dbe7f0', label: 'Biru pucat' },
-  { color: '#1f2229', label: 'Arang malam' },
+  { color: '#FFE27A', label: 'Kuning kertas' },
+  { color: '#F5F0E3', label: 'Putih tulang' },
+  { color: '#BDE0F0', label: 'Biru muda' },
+  { color: '#F6C4CC', label: 'Merah muda' },
+  { color: '#C6E6C0', label: 'Hijau pastel' },
+  { color: '#FFC999', label: 'Oranye hangat' },
+  { color: '#26252b', label: 'Abu malam' },
 ]
 
 export const TEXT_SWATCHES: { color: string; label: string }[] = [

@@ -1,4 +1,4 @@
-import { PushpinIcon } from './Icons'
+import { RealisticPin } from './Icons'
 
 interface PinDragGhostProps {
   clientX: number
@@ -16,10 +16,10 @@ export function PinDragGhost({
       className="pin-drag-ghost"
       aria-hidden="true"
       style={{
-        transform: `translate3d(${clientX - 16}px, ${clientY - 22}px, 0) rotate(${isOverTarget ? '0deg' : '-12deg'})`,
+        transform: `translate3d(${clientX - 14}px, ${clientY - 16}px, 0) rotate(${isOverTarget ? '0deg' : '-12deg'})`,
       }}
     >
-      <PushpinIcon size={24} />
+      <RealisticPin size={30} />
     </div>
   )
 }
