@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "skills": {
+    "vite-react-best-practices": {
+      "source": "claudiocebpaz/vite-react-best-practices",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "1c13b78aa93da42a971c2671641cafbb241bbb85a498eb194ad10c87a56b46de"
+    }
+  }
+}
