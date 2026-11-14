@@ -14,6 +14,13 @@ import {
   isSheetsConfigured,
   saveNotesToSheets,
 } from '../../../lib/sheetsService'
+import {
+  deleteNoteFromSupabase,
+  fetchNotesFromSupabase,
+  saveNoteToSupabase,
+  subscribeToSupabaseNotes,
+} from '../../../lib/supabaseService'
+import { isSupabaseConfigured } from '../../../lib/supabaseClient'
 
 export function useBoardNotes() {
   const [notes, setNotes] = useState<Note[]>([])
@@ -45,40 +52,74 @@ export function useBoardNotes() {
     }, 1000)
   }, [])
 
-  // Memuat data pertama kali dari Google Sheets jika URL sudah diset
+  // Memuat data awal dan menghubungkan ke Supabase Realtime (atau fallback ke Google Sheets)
   useEffect(() => {
-    let active = true
+    let unsubscribe: (() => void) | undefined
 
-    async function loadRemoteNotes() {
+    if (isSupabaseConfigured) {
+      fetchNotesFromSupabase().then((remoteNotes) => {
+        if (remoteNotes) {
+          setNotes(remoteNotes)
+          const maxZ = remoteNotes.reduce((max, n) => Math.max(max, n.zIndex), 0)
+          if (maxZ > 0) {
+            nextZIndexRef.current = maxZ + 1
+          }
+          announce(`Mading siap (${remoteNotes.length} catatan)`)
+        }
+        isLoadedRef.current = true
+      })
+
+      unsubscribe = subscribeToSupabaseNotes({
+        onInsert: (newNote) => {
+          setNotes((prev) => {
+            if (prev.some((n) => n.id === newNote.id)) return prev
+            return [...prev, newNote]
+          })
+          announce('Catatan baru ditambahkan')
+        },
+        onUpdate: (updatedNote) => {
+          setNotes((prev) => {
+            // Jangan timpa jika user di browser ini sedang menyeret catatan ini
+            if (dragRef.current?.noteId === updatedNote.id) {
+              return prev
+            }
+            return prev.map((n) => (n.id === updatedNote.id ? updatedNote : n))
+          })
+        },
+        onDelete: (deletedId) => {
+          setNotes((prev) => prev.filter((n) => n.id !== deletedId))
+          announce('Catatan dihapus')
+        },
+      })
+    } else {
       if (!isSheetsConfigured()) {
         isLoadedRef.current = true
         return
       }
 
-      announce('Memuat catatan dari Google Sheets...')
-      const remoteNotes = await fetchNotesFromSheets()
-
-      if (active && remoteNotes) {
-        setNotes(remoteNotes)
-        const maxZ = remoteNotes.reduce((max, n) => Math.max(max, n.zIndex), 0)
-        if (maxZ > 0) {
-          nextZIndexRef.current = maxZ + 1
+      fetchNotesFromSheets().then((remoteNotes) => {
+        if (remoteNotes) {
+          setNotes(remoteNotes)
+          const maxZ = remoteNotes.reduce((max, n) => Math.max(max, n.zIndex), 0)
+          if (maxZ > 0) {
+            nextZIndexRef.current = maxZ + 1
+          }
+          announce(`Memuat ${remoteNotes.length} catatan dari Google Sheets`)
         }
-        announce(`Memuat ${remoteNotes.length} catatan dari Google Sheets`)
-      }
-      isLoadedRef.current = true
+        isLoadedRef.current = true
+      })
     }
 
-    loadRemoteNotes()
-
     return () => {
-      active = false
+      if (unsubscribe) {
+        unsubscribe()
+      }
     }
   }, [announce])
 
-  // Sinkronisasi otomatis ke Google Sheets setiap kali notes berubah (debounced 1 detik)
+  // Sinkronisasi otomatis ke Google Sheets HANYA jika Supabase TIDAK aktif
   useEffect(() => {
-    if (!isLoadedRef.current || !isSheetsConfigured()) {
+    if (isSupabaseConfigured || !isLoadedRef.current || !isSheetsConfigured()) {
       return
     }
 
@@ -148,12 +189,21 @@ export function useBoardNotes() {
     nextZIndexRef.current += 1
     const nextZ = nextZIndexRef.current
     setNotes((prev) =>
-      prev.map((note) => (note.id === id ? { ...note, zIndex: nextZ } : note)),
+      prev.map((note) => {
+        if (note.id !== id) return note
+        const updated = { ...note, zIndex: nextZ }
+        if (isSupabaseConfigured) {
+          saveNoteToSupabase(updated)
+        }
+        return updated
+      }),
     )
   }, [])
 
   const addNote = useCallback(() => {
     const id = crypto.randomUUID()
+    let createdNote: Note | null = null
+
     setNotes((prev) => {
       const offset = (prev.length % 6) * 24
       const initialX = Math.max(
@@ -173,26 +223,30 @@ export function useBoardNotes() {
 
       const randomTilt = Math.round((Math.random() * 3.6 - 1.8) * 10) / 10
 
-      return [
-        ...prev,
-        {
-          id,
-          text: '',
-          x: clamped.x,
-          y: clamped.y,
-          zIndex,
-          pinned: false,
-          paperColor: '#FFE27A',
-          textColor: null,
-          pattern: 'polos',
-          font: 'sans',
-          shape: 'standar',
-          rotation: randomTilt,
-          pinX: 50,
-          pinY: 12,
-        },
-      ]
+      createdNote = {
+        id,
+        text: '',
+        x: clamped.x,
+        y: clamped.y,
+        zIndex,
+        pinned: false,
+        paperColor: '#FFE27A',
+        textColor: null,
+        pattern: 'polos',
+        font: 'sans',
+        shape: 'standar',
+        rotation: randomTilt,
+        pinX: 50,
+        pinY: 12,
+      }
+
+      return [...prev, createdNote]
     })
+
+    if (createdNote && isSupabaseConfigured) {
+      saveNoteToSupabase(createdNote)
+    }
+
     setFocusId(id)
   }, [])
 
@@ -202,7 +256,14 @@ export function useBoardNotes() {
       patch: Partial<Pick<Note, 'paperColor' | 'textColor' | 'pattern' | 'font' | 'shape'>>,
     ) => {
       setNotes((prev) =>
-        prev.map((note) => (note.id === id ? { ...note, ...patch } : note)),
+        prev.map((note) => {
+          if (note.id !== id) return note
+          const updated = { ...note, ...patch }
+          if (isSupabaseConfigured) {
+            saveNoteToSupabase(updated)
+          }
+          return updated
+        }),
       )
     },
     [],
@@ -215,16 +276,19 @@ export function useBoardNotes() {
         if (index === -1) return prev
         triggerPinAnimation(id)
         announce(`Catatan ${index + 1} ditempelkan ke mading`)
-        return prev.map((note) =>
-          note.id === id
-            ? {
-                ...note,
-                pinned: true,
-                pinX: coords ? coords.pinX : (note.pinX ?? 50),
-                pinY: coords ? coords.pinY : (note.pinY ?? 12),
-              }
-            : note,
-        )
+        return prev.map((note) => {
+          if (note.id !== id) return note
+          const updated = {
+            ...note,
+            pinned: true,
+            pinX: coords ? coords.pinX : (note.pinX ?? 50),
+            pinY: coords ? coords.pinY : (note.pinY ?? 12),
+          }
+          if (isSupabaseConfigured) {
+            saveNoteToSupabase(updated)
+          }
+          return updated
+        })
       })
     },
     [announce, triggerPinAnimation],
@@ -233,7 +297,14 @@ export function useBoardNotes() {
   const unpinNoteById = useCallback(
     (id: string, index: number) => {
       setNotes((prev) =>
-        prev.map((note) => (note.id === id ? { ...note, pinned: false } : note)),
+        prev.map((note) => {
+          if (note.id !== id) return note
+          const updated = { ...note, pinned: false }
+          if (isSupabaseConfigured) {
+            saveNoteToSupabase(updated)
+          }
+          return updated
+        }),
       )
       triggerUnpinAnimation(id)
       announce(`Paku pada catatan ${index + 1} dilepas`)
@@ -248,12 +319,16 @@ export function useBoardNotes() {
         prev.map((note) => {
           if (note.id !== id) return note
           nextPinned = !note.pinned
-          return {
+          const updated = {
             ...note,
             pinned: nextPinned,
             pinX: nextPinned && coords ? coords.pinX : (note.pinX ?? 50),
             pinY: nextPinned && coords ? coords.pinY : (note.pinY ?? 12),
           }
+          if (isSupabaseConfigured) {
+            saveNoteToSupabase(updated)
+          }
+          return updated
         }),
       )
       if (nextPinned) {
@@ -271,13 +346,33 @@ export function useBoardNotes() {
   )
 
   const updateNoteText = useCallback((id: string, text: string) => {
+    let targetNote: Note | undefined
+
     setNotes((prev) =>
-      prev.map((note) => (note.id === id ? { ...note, text } : note)),
+      prev.map((note) => {
+        if (note.id !== id) return note
+        targetNote = { ...note, text }
+        return targetNote
+      }),
     )
+
+    if (isSupabaseConfigured) {
+      if (saveTimeoutRef.current !== null) {
+        window.clearTimeout(saveTimeoutRef.current)
+      }
+      saveTimeoutRef.current = window.setTimeout(() => {
+        if (targetNote) {
+          saveNoteToSupabase(targetNote)
+        }
+      }, 400)
+    }
   }, [])
 
   const deleteNote = useCallback((id: string) => {
     setNotes((prev) => prev.filter((note) => note.id !== id))
+    if (isSupabaseConfigured) {
+      deleteNoteFromSupabase(id)
+    }
   }, [])
 
   const toggleCustomize = useCallback((id: string) => {
@@ -349,8 +444,18 @@ export function useBoardNotes() {
 
   const handleHandleLostCapture = useCallback((noteId: string) => {
     if (dragRef.current?.noteId === noteId) {
+      const moved = dragRef.current.moved
       dragRef.current = null
       setDraggingId(null)
+      if (moved && isSupabaseConfigured) {
+        setNotes((prev) => {
+          const droppedNote = prev.find((n) => n.id === noteId)
+          if (droppedNote) {
+            saveNoteToSupabase(droppedNote)
+          }
+          return prev
+        })
+      }
     }
   }, [])
 
@@ -362,9 +467,9 @@ export function useBoardNotes() {
     ) => {
       if (note.pinned) return
 
-      const step = event.shiftKey ? KEYBOARD_FAST_STEP : KEYBOARD_STEP
       let dx = 0
       let dy = 0
+      const step = event.shiftKey ? KEYBOARD_FAST_STEP : KEYBOARD_STEP
 
       switch (event.key) {
         case 'ArrowLeft':
@@ -384,29 +489,26 @@ export function useBoardNotes() {
       }
 
       event.preventDefault()
+      bringToFront(note.id)
+
       const el = cardRefs.current[note.id]
       const width = el?.offsetWidth ?? DEFAULT_CARD_WIDTH
       const height = el?.offsetHeight ?? DEFAULT_CARD_HEIGHT
-      const clamped = clampNotePosition(
-        note.x + dx,
-        note.y + dy,
-        width,
-        height,
-      )
-
-      nextZIndexRef.current += 1
-      const nextZ = nextZIndexRef.current
+      const clamped = clampNotePosition(note.x + dx, note.y + dy, width, height)
 
       setNotes((prev) =>
-        prev.map((item) =>
-          item.id === note.id
-            ? { ...item, x: clamped.x, y: clamped.y, zIndex: nextZ }
-            : item,
-        ),
+        prev.map((item) => {
+          if (item.id !== note.id) return item
+          const updated = { ...item, x: clamped.x, y: clamped.y }
+          if (isSupabaseConfigured) {
+            saveNoteToSupabase(updated)
+          }
+          return updated
+        }),
       )
-      announce(`Catatan ${index + 1} dipindahkan`)
+      announce(`Catatan ${index + 1} dipindahkan ke ${clamped.x}, ${clamped.y}`)
     },
-    [announce],
+    [announce, bringToFront],
   )
 
   const registerCardRef = useCallback((id: string, el: HTMLElement | null) => {
@@ -458,4 +560,3 @@ export function useBoardNotes() {
     getCardRect,
   }
 }
-

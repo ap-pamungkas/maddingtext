@@ -134,36 +134,6 @@ export const NoteCard = memo(function NoteCard({
         </div>
       )}
 
-      {note.pinned && (
-        <>
-          <span
-            className="note-pin-hole"
-            aria-hidden="true"
-            style={{ left: `${pinXPos}%`, top: `${pinYPos}px` }}
-          />
-          <button
-            type="button"
-            className={`note-pin-btn${isJustPinned ? ' note-pin-btn--just-pinned' : ''}${isUnpinning ? ' dragging' : ''}`}
-            style={{
-              left: `${pinXPos}%`,
-              ...(isUnpinning ? { opacity: 0 } : {}),
-            }}
-            aria-label={`Lepas paku pada catatan ${index + 1}`}
-            title="Klik atau seret keluar untuk melepas paku"
-            onPointerDown={(e) => onNotePinPointerDown(e, note.id, index)}
-            onPointerMove={onNotePinPointerMove}
-            onPointerUp={onNotePinPointerUp}
-            onLostPointerCapture={onNotePinLostCapture}
-            onClick={(e) => {
-              e.stopPropagation()
-              onTogglePin(note.id, index)
-            }}
-          >
-            <RealisticPin size={26} />
-          </button>
-        </>
-      )}
-
       <div className="note-header">
         <button
           type="button"
@@ -222,7 +192,36 @@ export const NoteCard = memo(function NoteCard({
         placeholder="Tulis catatan..."
         aria-label={`Isi catatan ${index + 1}`}
       />
+
+      {note.pinned && (
+        <>
+          <span
+            className="note-pin-hole"
+            aria-hidden="true"
+            style={{ left: `${pinXPos}%`, top: `${pinYPos}px` }}
+          />
+          <button
+            type="button"
+            className={`note-pin-btn${isJustPinned ? ' note-pin-btn--just-pinned' : ''}${isUnpinning ? ' dragging' : ''}`}
+            style={{
+              left: `${pinXPos}%`,
+              ...(isUnpinning ? { opacity: 0 } : {}),
+            }}
+            aria-label={`Lepas paku pada catatan ${index + 1}`}
+            title="Klik atau seret keluar untuk melepas paku"
+            onPointerDown={(e) => onNotePinPointerDown(e, note.id, index)}
+            onPointerMove={onNotePinPointerMove}
+            onPointerUp={onNotePinPointerUp}
+            onLostPointerCapture={onNotePinLostCapture}
+            onClick={(e) => {
+              e.stopPropagation()
+              onTogglePin(note.id, index)
+            }}
+          >
+            <RealisticPin size={26} />
+          </button>
+        </>
+      )}
     </article>
   )
 })
-

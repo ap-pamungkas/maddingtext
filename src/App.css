@@ -149,8 +149,8 @@
 /* Paper shape: lipat (folded dog-ear corner) */
 .note-card--shape-lipat {
   clip-path: polygon(
-    0 0,
-    100% 0,
+    0 -40px,
+    100% -40px,
     100% calc(100% - 22px),
     calc(100% - 22px) 100%,
     0 100%
@@ -366,7 +366,7 @@
 .note-pin-btn {
   position: absolute;
   top: -14px;
-  z-index: 2;
+  z-index: 20;
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
