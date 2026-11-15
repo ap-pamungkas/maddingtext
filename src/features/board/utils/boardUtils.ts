@@ -1,23 +1,42 @@
-import { CANVAS_PADDING } from '../constants'
+const MAX_WORLD_BOUND = 100000
 
 export function clampNotePosition(
   x: number,
   y: number,
-  cardWidth: number,
-  cardHeight: number,
+  cardWidth = 0,
+  cardHeight = 0,
 ): { x: number; y: number } {
-  const maxLeft = Math.max(
-    CANVAS_PADDING,
-    window.innerWidth - cardWidth - CANVAS_PADDING,
-  )
-  const maxTop = Math.max(
-    CANVAS_PADDING,
-    window.innerHeight - cardHeight - CANVAS_PADDING,
-  )
-
+  // Dalam infinite canvas, catatan dapat ditempatkan bebas di ruang dunia
+  // Clamping hanya untuk mencegah overflow/NaN numerik ekstrim
+  const maxX = MAX_WORLD_BOUND - Math.max(0, cardWidth)
+  const maxY = MAX_WORLD_BOUND - Math.max(0, cardHeight)
   return {
-    x: Math.max(CANVAS_PADDING, Math.min(x, maxLeft)),
-    y: Math.max(CANVAS_PADDING, Math.min(y, maxTop)),
+    x: Math.max(-MAX_WORLD_BOUND, Math.min(x, maxX)),
+    y: Math.max(-MAX_WORLD_BOUND, Math.min(y, maxY)),
+  }
+}
+
+export function clientToWorld(
+  clientX: number,
+  clientY: number,
+  pan: { x: number; y: number },
+  zoom: number,
+): { x: number; y: number } {
+  return {
+    x: (clientX - pan.x) / zoom,
+    y: (clientY - pan.y) / zoom,
+  }
+}
+
+export function worldToClient(
+  worldX: number,
+  worldY: number,
+  pan: { x: number; y: number },
+  zoom: number,
+): { x: number; y: number } {
+  return {
+    x: worldX * zoom + pan.x,
+    y: worldY * zoom + pan.y,
   }
 }
 

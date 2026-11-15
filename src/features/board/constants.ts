@@ -6,6 +6,11 @@ export const CANVAS_PADDING = 16
 export const KEYBOARD_STEP = 16
 export const KEYBOARD_FAST_STEP = 48
 
+export const MIN_ZOOM = 0.25
+export const MAX_ZOOM = 2.5
+export const DEFAULT_ZOOM = 1.0
+export const ZOOM_STEP = 0.15
+
 export const PAPER_SHAPES: { id: PaperShape; label: string }[] = [
   { id: 'standar', label: 'Potongan rapi' },
   { id: 'lipat', label: 'Sudut terlipat' },

@@ -1,10 +1,35 @@
 .canvas {
   position: relative;
   width: 100%;
+  height: 100dvh;
   min-height: 100dvh;
   background-color: var(--canvas-bg);
   isolation: isolate;
   overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+
+.canvas--panning {
+  cursor: grabbing;
+}
+
+.canvas--pin-mode {
+  cursor: crosshair;
+}
+
+.canvas-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.canvas-world > * {
+  pointer-events: auto;
 }
 
 .canvas::before {
@@ -123,8 +148,8 @@
   display: flex;
   flex-direction: column;
   width: fit-content;
-  min-width: min(268px, calc(100vw - 32px));
-  max-width: calc(100vw - 32px);
+  min-width: 268px;
+  max-width: 480px;
   min-height: 190px;
   padding: 8px 12px 12px;
   border: 1px solid color-mix(in oklab, var(--note-fg) 14%, var(--note-bg));
@@ -587,11 +612,11 @@
 
 .note-textarea {
   flex: 1;
-  width: min(242px, calc(100vw - 58px));
-  min-width: min(242px, calc(100vw - 58px));
-  max-width: calc(100vw - 58px);
+  width: 242px;
+  min-width: 200px;
+  max-width: 450px;
   min-height: 120px;
-  max-height: calc(100dvh - 110px);
+  max-height: 600px;
   padding: 6px;
   border: 0;
   border-radius: 4px;
@@ -679,6 +704,139 @@
   }
 }
 
+/* Canvas Controls (Pan & Zoom floating bar) */
+.canvas-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none;
+  max-width: calc(100vw - 40px);
+}
+
+.canvas-controls-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 0.08),
+    0 8px 20px -2px rgb(0 0 0 / 0.16);
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.canvas-control-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-inline-size: 38px;
+  min-block-size: 38px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font: 500 0.875rem / 1 system-ui, -apple-system, sans-serif;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    transform 100ms ease;
+}
+
+@media (hover: hover) {
+  .canvas-control-btn:hover {
+    background-color: var(--surface-hover);
+    border-color: var(--border);
+  }
+}
+
+.canvas-control-btn:active {
+  transform: scale(0.96);
+}
+
+.canvas-control-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.canvas-control-btn--zoom-level {
+  min-inline-size: 54px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.canvas-control-btn--zoom-level:hover {
+  color: var(--text-primary);
+}
+
+.canvas-control-btn--fit {
+  padding: 0 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.canvas-control-btn-label {
+  display: inline;
+}
+
+.canvas-controls-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background-color: var(--border);
+}
+
+.canvas-controls-hint {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background-color: color-mix(in oklab, var(--surface) 88%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.08);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  opacity: 0.88;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  .canvas-controls {
+    bottom: 16px;
+    left: 16px;
+    gap: 6px;
+  }
+
+  .canvas-control-btn {
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    padding: 0 8px;
+  }
+
+  .canvas-control-btn-label {
+    display: none;
+  }
+
+  .canvas-controls-hint {
+    display: none;
+  }
+}
+
 @media (forced-colors: active) {
   .canvas::before {
     display: none;
@@ -687,5 +845,9 @@
   .toolbar-btn[aria-pressed='true'] {
     border-color: Highlight;
     color: Highlight;
+  }
+
+  .canvas-control-btn:focus-visible {
+    outline: 2px solid Highlight;
   }
 }

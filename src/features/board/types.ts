@@ -55,3 +55,13 @@ export interface UnpinDragPreview {
   detached: boolean
 }
 
+export interface CanvasPan {
+  x: number
+  y: number
+}
+
+export interface CanvasTransform {
+  pan: CanvasPan
+  zoom: number
+}
+

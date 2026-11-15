@@ -1,14 +1,18 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import type { PointerEvent } from 'react'
+import { CanvasControls } from './components/CanvasControls'
 import { CanvasToolbar } from './components/CanvasToolbar'
 import { NoteCard } from './components/NoteCard'
 import { PinDragGhost } from './components/PinDragGhost'
 import { useBoardNotes } from './hooks/useBoardNotes'
+import { useCanvasTransform } from './hooks/useCanvasTransform'
 import { usePinInteractions } from './hooks/usePinInteractions'
 import type { Note } from './types'
 import { calculatePinDropPosition } from './utils/boardUtils'
 
 export function BoardCanvas() {
+  const containerRef = useRef<HTMLElement | null>(null)
+
   const {
     notes,
     draggingId,
@@ -69,10 +73,28 @@ export function BoardCanvas() {
     onUnpinNote: unpinNoteById,
   })
 
+  const {
+    pan,
+    zoom,
+    isPanning,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    fitToNotes,
+    getViewportCenterWorld,
+    handleCanvasPointerDown,
+    handleCanvasPointerMove,
+    handleCanvasPointerUp,
+  } = useCanvasTransform({
+    containerRef,
+    isPinModeActive: pinMode,
+  })
+
   const handleAddNote = useCallback(() => {
     deactivatePinMode()
-    addNote()
-  }, [addNote, deactivatePinMode])
+    const center = getViewportCenterWorld()
+    addNote(center)
+  }, [addNote, deactivatePinMode, getViewportCenterWorld])
 
   const handleTogglePinFromBoard = useCallback(
     (id: string, index: number, clientX?: number) => {
@@ -104,12 +126,24 @@ export function BoardCanvas() {
     [handleHandlePointerDown, pinMode],
   )
 
+  const onCardHandlePointerMove = useCallback(
+    (event: PointerEvent<HTMLButtonElement>, noteId: string) => {
+      handleHandlePointerMove(event, noteId, zoom)
+    },
+    [handleHandlePointerMove, zoom],
+  )
+
   const activeGhost = pinDrag ?? unpinDrag
 
   return (
     <main
-      className={`canvas${pinMode ? ' canvas--pin-mode' : ''}`}
-      aria-label="Kanvas catatan"
+      ref={containerRef}
+      className={`canvas${pinMode ? ' canvas--pin-mode' : ''}${isPanning ? ' canvas--panning' : ''}`}
+      aria-label="Kanvas catatan mading tak hingga"
+      onPointerDown={handleCanvasPointerDown}
+      onPointerMove={handleCanvasPointerMove}
+      onPointerUp={handleCanvasPointerUp}
+      onPointerCancel={handleCanvasPointerUp}
     >
       <div className="visually-hidden" aria-live="polite">
         {announcement}
@@ -126,39 +160,55 @@ export function BoardCanvas() {
         onAddNote={handleAddNote}
       />
 
-      {notes.map((note, index) => (
-        <NoteCard
-          key={note.id}
-          note={note}
-          index={index}
-          isDragging={draggingId === note.id}
-          isPinTarget={pinDrag?.targetNoteId === note.id}
-          isJustPinned={justPinnedId === note.id}
-          isJustUnpinned={justUnpinnedId === note.id}
-          isUnpinning={unpinDrag?.noteId === note.id}
-          isCustomizing={customizingId === note.id}
-          pinMode={pinMode}
-          onBringToFront={bringToFront}
-          onTogglePinFromBoard={handleTogglePinFromBoard}
-          onTogglePin={handleTogglePinDirect}
-          onUpdateText={updateNoteText}
-          onUpdateStyle={updateNoteStyle}
-          onDelete={deleteNote}
-          onToggleCustomize={toggleCustomize}
-          onCloseCustomize={closeCustomize}
-          onHandlePointerDown={onCardHandlePointerDown}
-          onHandlePointerMove={handleHandlePointerMove}
-          onHandleLostCapture={handleHandleLostCapture}
-          onHandleKeyDown={handleHandleKeyDown}
-          onNotePinPointerDown={handleNotePinPointerDown}
-          onNotePinPointerMove={handleNotePinPointerMove}
-          onNotePinPointerUp={handleNotePinPointerUp}
-          onNotePinLostCapture={handleNotePinLostCapture}
-          registerCardRef={registerCardRef}
-          registerTextareaRef={registerTextareaRef}
-          registerCustomizeBtnRef={registerCustomizeBtnRef}
-        />
-      ))}
+      <CanvasControls
+        zoom={zoom}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onResetZoom={resetZoom}
+        onFitView={() => fitToNotes(notes)}
+      />
+
+      <div
+        className="canvas-world"
+        style={{
+          transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+          transformOrigin: '0 0',
+        }}
+      >
+        {notes.map((note, index) => (
+          <NoteCard
+            key={note.id}
+            note={note}
+            index={index}
+            isDragging={draggingId === note.id}
+            isPinTarget={pinDrag?.targetNoteId === note.id}
+            isJustPinned={justPinnedId === note.id}
+            isJustUnpinned={justUnpinnedId === note.id}
+            isUnpinning={unpinDrag?.noteId === note.id}
+            isCustomizing={customizingId === note.id}
+            pinMode={pinMode}
+            onBringToFront={bringToFront}
+            onTogglePinFromBoard={handleTogglePinFromBoard}
+            onTogglePin={handleTogglePinDirect}
+            onUpdateText={updateNoteText}
+            onUpdateStyle={updateNoteStyle}
+            onDelete={deleteNote}
+            onToggleCustomize={toggleCustomize}
+            onCloseCustomize={closeCustomize}
+            onHandlePointerDown={onCardHandlePointerDown}
+            onHandlePointerMove={onCardHandlePointerMove}
+            onHandleLostCapture={handleHandleLostCapture}
+            onHandleKeyDown={handleHandleKeyDown}
+            onNotePinPointerDown={handleNotePinPointerDown}
+            onNotePinPointerMove={handleNotePinPointerMove}
+            onNotePinPointerUp={handleNotePinPointerUp}
+            onNotePinLostCapture={handleNotePinLostCapture}
+            registerCardRef={registerCardRef}
+            registerTextareaRef={registerTextareaRef}
+            registerCustomizeBtnRef={registerCustomizeBtnRef}
+          />
+        ))}
+      </div>
 
       {activeGhost && (
         <PinDragGhost

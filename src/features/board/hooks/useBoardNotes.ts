@@ -165,20 +165,11 @@ export function useBoardNotes() {
     }
   }, [focusId, notes])
 
+  // Pada kanvas tak hingga, resize layar atau perubahan orientasi HP tidak menggeser posisi catatan di koordinat dunia.
+  // Kami tetap menyimpan listener jika perlu menghitung ulang ukuran kartu.
   useEffect(() => {
     function handleResize() {
-      setNotes((prev) =>
-        prev.map((note) => {
-          const el = cardRefs.current[note.id]
-          const width = el?.offsetWidth ?? DEFAULT_CARD_WIDTH
-          const height = el?.offsetHeight ?? DEFAULT_CARD_HEIGHT
-          const clamped = clampNotePosition(note.x, note.y, width, height)
-          if (clamped.x === note.x && clamped.y === note.y) {
-            return note
-          }
-          return { ...note, x: clamped.x, y: clamped.y }
-        }),
-      )
+      // Tidak merubah koordinat catatan dunia saat ukuran viewport berubah
     }
 
     window.addEventListener('resize', handleResize)
@@ -200,17 +191,22 @@ export function useBoardNotes() {
     )
   }, [])
 
-  const addNote = useCallback(() => {
+  const addNote = useCallback((spawnCenter?: { x: number; y: number }) => {
     const id = crypto.randomUUID()
     let createdNote: Note | null = null
 
     setNotes((prev) => {
       const offset = (prev.length % 6) * 24
-      const initialX = Math.max(
-        CANVAS_PADDING,
-        Math.round(window.innerWidth / 2 - DEFAULT_CARD_WIDTH / 2) + offset - 48,
-      )
-      const initialY = Math.max(84, 96 + offset)
+      const initialX = spawnCenter
+        ? Math.round(spawnCenter.x - DEFAULT_CARD_WIDTH / 2) + offset
+        : Math.max(
+            CANVAS_PADDING,
+            Math.round(window.innerWidth / 2 - DEFAULT_CARD_WIDTH / 2) + offset - 48,
+          )
+      const initialY = spawnCenter
+        ? Math.round(spawnCenter.y - DEFAULT_CARD_HEIGHT / 2) + offset
+        : Math.max(84, 96 + offset)
+
       const clamped = clampNotePosition(
         initialX,
         initialY,
@@ -409,15 +405,16 @@ export function useBoardNotes() {
   )
 
   const handleHandlePointerMove = useCallback(
-    (event: PointerEvent<HTMLButtonElement>, noteId: string) => {
+    (event: PointerEvent<HTMLButtonElement>, noteId: string, zoom: number = 1) => {
       const drag = dragRef.current
       if (!drag || drag.noteId !== noteId) return
       if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
 
-      const dx = event.clientX - drag.startClientX
-      const dy = event.clientY - drag.startClientY
+      const safeZoom = Math.max(0.1, zoom)
+      const dx = (event.clientX - drag.startClientX) / safeZoom
+      const dy = (event.clientY - drag.startClientY) / safeZoom
 
-      if (!drag.moved && Math.hypot(dx, dy) < 4) return
+      if (!drag.moved && Math.hypot(dx * safeZoom, dy * safeZoom) < 4) return
       if (!drag.moved) {
         drag.moved = true
         setDraggingId(noteId)
