@@ -78,10 +78,11 @@
 .toolbar-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   min-inline-size: 44px;
   min-block-size: 44px;
-  padding: 0 14px;
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background-color: var(--surface);

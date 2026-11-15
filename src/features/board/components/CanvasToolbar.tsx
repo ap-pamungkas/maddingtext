@@ -1,5 +1,5 @@
 import type { KeyboardEvent, PointerEvent } from 'react'
-import { PlusIcon, PushpinIcon } from './Icons'
+import { NoteIcon, PushpinIcon } from './Icons'
 
 interface CanvasToolbarProps {
   pinMode: boolean
@@ -70,9 +70,14 @@ export function CanvasToolbar({
         className="toolbar-separator"
       />
 
-      <button type="button" className="toolbar-btn" onClick={onAddNote}>
-        <PlusIcon />
-        <span>Tambah catatan</span>
+      <button
+        type="button"
+        className="toolbar-btn"
+        onClick={onAddNote}
+        aria-label="Tambah catatan"
+        title="Tambah catatan"
+      >
+        <NoteIcon />
       </button>
     </div>
   )
