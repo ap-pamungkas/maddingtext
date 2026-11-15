@@ -36,6 +36,7 @@ export const NOTE_FONTS: { id: NoteFont; label: string; stack: string }[] = [
 ]
 
 export const PAPER_SWATCHES: { color: string; label: string }[] = [
+  { color: '#FFFFFF', label: 'Putih bersih' },
   { color: '#FFE27A', label: 'Kuning kertas' },
   { color: '#F5F0E3', label: 'Putih tulang' },
   { color: '#BDE0F0', label: 'Biru muda' },
